@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<package >
+	<metadata>
+    <id>NPOI.DumpExcel</id>
+    <version>1.1.1</version>
+		<title>NPOI.DumpExcel</title>
+		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
+		<authors>YC</authors>
+		<owners>YC</owners>
+		<requireLicenseAcceptance>false</requireLicenseAcceptance>
+		<releaseNotes></releaseNotes>
+		<copyright>Copyright 2017</copyright>
+		<tags>npoi, IEnumerable&lt;T&gt;</tags>
+    <dependencies>
+      <dependency id="NPOI" version="2.3.0" />
+    </dependencies>
+	</metadata>
+  <files>
+    <file src="NPOI.DumpExcel\bin\Release\NPOI.DumpExcel.*" target="lib\net45\" />
+    <file src="NPOI.DumpExcel40\bin\Release\NPOI.DumpExcel.*" target="lib\net40\" />
+  </files>
+</package>
