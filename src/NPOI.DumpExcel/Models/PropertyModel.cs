@@ -9,6 +9,8 @@ namespace NPOI.DumpExcel.Models
     /// </summary>
     internal class PropertyModel
     {
+        public int ColumnIndex { get; set; }
+
         /// <summary>
         /// column header name
         /// </summary>
@@ -23,11 +25,6 @@ namespace NPOI.DumpExcel.Models
         /// column width
         /// </summary>
         public int Width { get; set; }
-
-        /// <summary>
-        /// format id (It will be generated when the constructor is called)
-        /// </summary>
-        public int FormatId { get; set; }
 
         /// <summary>
         /// cell format

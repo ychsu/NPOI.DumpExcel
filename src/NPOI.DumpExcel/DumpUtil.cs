@@ -74,8 +74,9 @@ namespace NPOI.DumpExcel
                 })
                 .Where(t => t.excelAttr != null)
                 .OrderBy(t => t.excelAttr.Order)
-                .Select(t => new PropertyModel
+                .Select((t, idx) => new PropertyModel
                 {
+                    ColumnIndex = idx,
                     GetMethod = t.prop.GetGetMethod(),
                     SetMethod = t.prop.GetSetMethod(),
                     HeaderName = t.displayAttr?.GetName() ?? t.prop.Name,
@@ -88,20 +89,27 @@ namespace NPOI.DumpExcel
 
             #region filed 
             var sheet = typeBuilder.DefineField("sheet", typeof(ISheet), FieldAttributes.Private);
-            var stylesType = typeof(Dictionary<int, ICellStyle>);
-            var styles = typeBuilder.DefineField("styles", stylesType, FieldAttributes.Private);
             #endregion
 
-            EmitConstructor(sheetname, baseType, typeBuilder, properties, sheet, styles);
+            var emitSetColumnsStyle = EmitSetColumnsStyle(typeBuilder, sheet, properties);
+
+            var emitSetColumnsWidth = EmitSetColumnsWidth(typeBuilder, sheet, properties);
+
+            EmitConstructor(sheetname, baseType, typeBuilder, new MethodBuilder[] 
+            {
+                emitSetColumnsStyle,
+                emitSetColumnsWidth
+            }, properties, sheet);
 
             EmitCreateHeaderRow(typeBuilder, baseType, sheet, properties);
 
-            EmitCreateRow(typeBuilder, baseType, sheet, styles, properties);
+            EmitCreateRow(typeBuilder, baseType, sheet, properties);
 
             var serviceType = typeBuilder.CreateType();
 
-
+#if DEBUG
             assemblyBuilder.Save("YC.NPOI.DumpExcel.dll");
+#endif
             return serviceType;
         }
 
@@ -114,11 +122,11 @@ namespace NPOI.DumpExcel
         /// <param name="properties"></param>
         /// <param name="sheet"></param>
         /// <param name="styles"></param>
-        private static void EmitConstructor(string sheetname, Type baseType, TypeBuilder typeBuilder, IList<PropertyModel> properties, FieldBuilder sheet, FieldBuilder styles)
+        private static void EmitConstructor(string sheetname, Type baseType, TypeBuilder typeBuilder, IEnumerable<MethodBuilder> methods, IList<PropertyModel> properties, FieldBuilder sheet)
         {
             var constructParameterType = typeof(IWorkbook);
             var constructBuilder = typeBuilder.DefineConstructor(
-                MethodAttributes.Public,
+                MethodAttributes.Public | MethodAttributes.PrivateScope,
                 CallingConventions.Standard,
                 new Type[] { constructParameterType });
             if (constructBuilder != null)
@@ -135,35 +143,111 @@ namespace NPOI.DumpExcel
                 constructIl.Emit(OpCodes.Call, typeof(IWorkbook).GetMethod("CreateSheet", new Type[] { typeof(string) }));
                 constructIl.Emit(OpCodes.Stfld, sheet);
 
-                var format = constructIl.DeclareLocal(typeof(IDataFormat));
-                constructIl.Emit(OpCodes.Nop);
-                constructIl.Emit(OpCodes.Nop);
-                constructIl.Emit(OpCodes.Ldarg_1);
-                var createDataFormat = typeof(IWorkbook).GetMethod("CreateDataFormat", new Type[] { });
-                constructIl.Emit(OpCodes.Call, createDataFormat);
-                constructIl.Emit(OpCodes.Stloc, format);
-
-                constructIl.Emit(OpCodes.Ldarg_0);
-                constructIl.Emit(OpCodes.Newobj, styles.FieldType.GetConstructor(new Type[] { }));
-                constructIl.Emit(OpCodes.Stfld, styles);
-
-                SetFormatters(constructIl, styles, format, properties);
-
-                SetWidth(constructIl, sheet, properties);
+                foreach (var method in methods)
+                {
+                    constructIl.Emit(OpCodes.Ldarg_0);
+                    constructIl.Emit(OpCodes.Call, method);
+                }
 
                 constructIl.Emit(OpCodes.Nop);
                 constructIl.Emit(OpCodes.Ret);
             }
         }
 
+        private static MethodBuilder EmitSetColumnsStyle(TypeBuilder builder, FieldBuilder sheet, IList<PropertyModel> properties)
+        {
+            var methodBuilder = builder.DefineMethod("SetColumnsStyle",
+                MethodAttributes.Private | MethodAttributes.PrivateScope);
+
+            var il = methodBuilder.GetILGenerator();
+
+            #region local variables
+            var dataFormat = il.DeclareLocal(typeof(IDataFormat));
+            var style = il.DeclareLocal(typeof(ICellStyle));
+            #endregion
+
+            var method_CreateDataFormat = typeof(IWorkbook).GetMethod("CreateDataFormat", new Type[] { });
+            var method_GetFormat = typeof(IDataFormat).GetMethod("GetFormat", new Type[] { typeof(string) });
+            var method_CreateCellStyle = typeof(IWorkbook).GetMethod("CreateCellStyle", Type.EmptyTypes);
+            var method_SetDefaultColumnStyle = typeof(ISheet).GetMethod("SetDefaultColumnStyle");
+            var prop_Workbook = sheet.FieldType.GetProperty("Workbook");
+            var prop_DataFormat = style.LocalType.GetProperty("DataFormat");
+            var prop_Alignment = style.LocalType.GetProperty("Alignment");
+            var prop_VerticalAlignment = style.LocalType.GetProperty("VerticalAlignment");
+
+            il.Emit(OpCodes.Nop);
+
+            #region CreateDataFormat;
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, sheet);
+            il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
+            il.Emit(OpCodes.Call, method_CreateDataFormat);
+            il.Emit(OpCodes.Stloc, dataFormat);
+            #endregion
+
+            var groupByFormat = properties.GroupBy(p => p.CellFormatter)
+                .Select(g => new
+                {
+                    CellFormat = g.Key,
+                    Items = g
+                });
+            var formats = properties.Select(p => p.CellFormatter).Distinct().ToArray();
+            foreach (var format in groupByFormat)
+            {
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldfld, sheet);
+                il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
+                il.Emit(OpCodes.Call, method_CreateCellStyle);
+                il.Emit(OpCodes.Stloc, style);
+
+                if (string.IsNullOrEmpty(format.CellFormat.Format) == false)
+                {
+                    il.Emit(OpCodes.Ldloc, style);
+                    il.Emit(OpCodes.Ldloc, dataFormat);
+                    il.Emit(OpCodes.Ldstr, format.CellFormat.Format);
+                    il.Emit(OpCodes.Call, method_GetFormat);
+                    il.Emit(OpCodes.Callvirt, prop_DataFormat.GetSetMethod());
+                }
+
+                il.Emit(OpCodes.Ldloc, style);
+                il.Emit(OpCodes.Ldc_I4, (int)format.CellFormat.Alignment);
+                il.Emit(OpCodes.Callvirt, prop_Alignment.GetSetMethod());
+
+                il.Emit(OpCodes.Ldloc, style);
+                il.Emit(OpCodes.Ldc_I4, (int)format.CellFormat.VerticalAlign);
+                il.Emit(OpCodes.Callvirt, prop_VerticalAlignment.GetSetMethod());
+
+                // set columns
+                foreach (var prop in format.Items)
+                {
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Ldfld, sheet);
+                    il.Emit(OpCodes.Ldc_I4, prop.ColumnIndex);
+                    il.Emit(OpCodes.Ldloc, style);
+                    il.Emit(OpCodes.Call, method_SetDefaultColumnStyle);
+                }
+            }
+
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ret);
+
+            return methodBuilder;
+        }
+
         /// <summary>
         /// 設定所有欄位欄寬 (如果有設定)
         /// </summary>
-        /// <param name="il"></param>
+        /// <param name="builder"></param>
         /// <param name="sheet"></param>
         /// <param name="properties"></param>
-        private static void SetWidth(ILGenerator il, FieldBuilder sheet, IList<PropertyModel> properties)
+        private static MethodBuilder EmitSetColumnsWidth(TypeBuilder builder, FieldBuilder sheet, IList<PropertyModel> properties)
         {
+            var methodBuilder = builder.DefineMethod("SetColumnsWidth",
+                MethodAttributes.Private | MethodAttributes.PrivateScope);
+
+            var il = methodBuilder.GetILGenerator();
+
+            il.Emit(OpCodes.Nop);
             for (int i = 0; i < properties.Count(); i++)
             {
                 var prop = properties.ElementAt(i);
@@ -176,65 +260,13 @@ namespace NPOI.DumpExcel
                     il.Emit(OpCodes.Callvirt, sheet.FieldType.GetMethod("SetColumnWidth"));
                 }
             }
+
+            il.Emit(OpCodes.Nop);
+            il.Emit(OpCodes.Ret);
+
+            return methodBuilder;
         }
 
-        /// <summary>
-        /// 建立format並且寫到field中 
-        /// </summary>
-        /// <param name="il"></param>
-        /// <param name="styles"></param>
-        /// <param name="format"></param>
-        /// <param name="properties"></param>
-        private static void SetFormatters(ILGenerator il,
-            FieldBuilder styles,
-            LocalBuilder format,
-            IList<PropertyModel> properties)
-        {
-            var getFormat = typeof(IDataFormat).GetMethod("GetFormat", new Type[] { typeof(string) });
-            var createCellStyle = typeof(IWorkbook).GetMethod("CreateCellStyle", Type.EmptyTypes);
-            var cellStyleType = typeof(ICellStyle);
-            var dataFormat = cellStyleType.GetProperty("DataFormat");
-            var alignment = cellStyleType.GetProperty("Alignment");
-            var verticalAlignment = cellStyleType.GetProperty("VerticalAlignment");
-
-            var formats = properties.Select(p => p.CellFormatter).Distinct().ToArray();
-            for (var i = 0; i < formats.Length; i++)
-            {
-                foreach (var prop in properties.Where(p => p.CellFormatter.Equals(formats[i]) == true))
-                {
-                    prop.FormatId = i;
-                }
-                var f = formats[i];
-
-                var style = il.DeclareLocal(typeof(ICellStyle));
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Call, createCellStyle);
-                il.Emit(OpCodes.Stloc, style);
-
-                if (string.IsNullOrEmpty(f.Format) == false)
-                {
-                    il.Emit(OpCodes.Ldloc, style);
-                    il.Emit(OpCodes.Ldloc, format);
-                    il.Emit(OpCodes.Ldstr, f.Format);
-                    il.Emit(OpCodes.Call, getFormat);
-                    il.Emit(OpCodes.Callvirt, dataFormat.GetSetMethod());
-                }
-
-                il.Emit(OpCodes.Ldloc, style);
-                il.Emit(OpCodes.Ldc_I4, (int)f.Alignment);
-                il.Emit(OpCodes.Callvirt, alignment.GetSetMethod());
-
-                il.Emit(OpCodes.Ldloc, style);
-                il.Emit(OpCodes.Ldc_I4, (int)f.VerticalAlign);
-                il.Emit(OpCodes.Callvirt, verticalAlignment.GetSetMethod());
-
-                il.Emit(OpCodes.Ldfld, styles);
-                il.Emit(OpCodes.Ldc_I4, i);
-                il.Emit(OpCodes.Ldloc, style);
-                il.Emit(OpCodes.Callvirt, styles.FieldType.GetMethod("Add"));
-            }
-        }
 
         /// <summary>
         /// 建立 method CreateHeaderRow (因繼承DumpServiceBase, 所以實作)
@@ -284,14 +316,9 @@ namespace NPOI.DumpExcel
         /// <param name="builder"></param>
         /// <param name="baseType"></param>
         /// <param name="sheet"></param>
-        /// <param name="styles"></param>
         /// <param name="properties"></param>
-        private static void EmitCreateRow(TypeBuilder builder, Type baseType, FieldBuilder sheet, FieldBuilder styles, IEnumerable<PropertyModel> properties)
+        private static void EmitCreateRow(TypeBuilder builder, Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
         {
-            var styleDicType = styles.FieldType;
-            var get_Item = styleDicType.GetMethod("get_Item");
-            var set_CellStyle = typeof(ICell).GetMethod("set_CellStyle");
-
             var methodBuilder = builder.DefineMethod("CreateRow",
                 MethodAttributes.PrivateScope | MethodAttributes.Family | MethodAttributes.ReuseSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig,
                 null,
@@ -318,15 +345,6 @@ namespace NPOI.DumpExcel
                 il.Emit(OpCodes.Callvirt, createCell);
                 il.Emit(OpCodes.Stloc, cell);
                 SetCellValue(property, il, cell);
-                var style = il.DeclareLocal(typeof(ICellStyle));
-                il.Emit(OpCodes.Ldarg_0);
-                il.Emit(OpCodes.Ldfld, styles);
-                il.Emit(OpCodes.Ldc_I4, property.FormatId);
-                il.Emit(OpCodes.Callvirt, get_Item);
-                il.Emit(OpCodes.Stloc, style);
-                il.Emit(OpCodes.Ldloc, cell);
-                il.Emit(OpCodes.Ldloc, style);
-                il.Emit(OpCodes.Callvirt, set_CellStyle);
             }
 
             il.Emit(OpCodes.Nop);
@@ -370,6 +388,23 @@ namespace NPOI.DumpExcel
                     break;
             }
         }
+
+        //private static Action<PropertyInfo, ILGenerator, ICell> GetSetCellValueMethod(Type propertyType)
+        //{
+        //    if (propertyType.IsNested == false)
+        //    {
+        //        if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
+        //        {
+        //            return GetSetCellValueMethod(propertyType.GenericTypeArguments[0]);
+        //        }
+
+        //        if (propertyType.IsPrimitive == false)
+        //        {
+
+        //        }
+        //    }
+        //    return null;
+        //}
 
         private static void SetNumericCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
         {
