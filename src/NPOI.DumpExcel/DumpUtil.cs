@@ -95,7 +95,7 @@ namespace NPOI.DumpExcel
 
             var emitSetColumnsWidth = EmitSetColumnsWidth(typeBuilder, sheet, properties);
 
-            EmitConstructor(sheetname, baseType, typeBuilder, new MethodBuilder[] 
+            EmitConstructor(sheetname, baseType, typeBuilder, new MethodBuilder[]
             {
                 emitSetColumnsStyle,
                 emitSetColumnsWidth
@@ -131,26 +131,26 @@ namespace NPOI.DumpExcel
                 new Type[] { constructParameterType });
             if (constructBuilder != null)
             {
-                var constructIl = constructBuilder.GetILGenerator();
-                constructIl.Emit(OpCodes.Ldarg_0);
-                constructIl.Emit(OpCodes.Ldarg_1);
-                constructIl.Emit(OpCodes.Call, baseType.GetConstructor(new Type[] { constructParameterType }));
-                constructIl.Emit(OpCodes.Nop);
-                constructIl.Emit(OpCodes.Nop);
-                constructIl.Emit(OpCodes.Ldarg_0);
-                constructIl.Emit(OpCodes.Ldarg_1);
-                constructIl.Emit(OpCodes.Ldstr, sheetname);
-                constructIl.Emit(OpCodes.Call, typeof(IWorkbook).GetMethod("CreateSheet", new Type[] { typeof(string) }));
-                constructIl.Emit(OpCodes.Stfld, sheet);
+                var il = constructBuilder.GetILGenerator();
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Call, baseType.GetConstructor(new Type[] { constructParameterType }));
+                il.Emit(OpCodes.Nop);
+                il.Emit(OpCodes.Nop);
+                il.Emit(OpCodes.Ldarg_0);
+                il.Emit(OpCodes.Ldarg_1);
+                il.Emit(OpCodes.Ldstr, sheetname);
+                il.Emit(OpCodes.Callvirt, typeof(IWorkbook).GetMethod("CreateSheet", new Type[] { typeof(string) }));
+                il.Emit(OpCodes.Stfld, sheet);
 
                 foreach (var method in methods)
                 {
-                    constructIl.Emit(OpCodes.Ldarg_0);
-                    constructIl.Emit(OpCodes.Call, method);
+                    il.Emit(OpCodes.Ldarg_0);
+                    il.Emit(OpCodes.Call, method);
                 }
 
-                constructIl.Emit(OpCodes.Nop);
-                constructIl.Emit(OpCodes.Ret);
+                il.Emit(OpCodes.Nop);
+                il.Emit(OpCodes.Ret);
             }
         }
 
@@ -181,7 +181,7 @@ namespace NPOI.DumpExcel
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, sheet);
             il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
-            il.Emit(OpCodes.Call, method_CreateDataFormat);
+            il.Emit(OpCodes.Callvirt, method_CreateDataFormat);
             il.Emit(OpCodes.Stloc, dataFormat);
             #endregion
 
@@ -197,7 +197,7 @@ namespace NPOI.DumpExcel
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldfld, sheet);
                 il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
-                il.Emit(OpCodes.Call, method_CreateCellStyle);
+                il.Emit(OpCodes.Callvirt, method_CreateCellStyle);
                 il.Emit(OpCodes.Stloc, style);
 
                 if (string.IsNullOrEmpty(format.CellFormat.Format) == false)
@@ -205,7 +205,7 @@ namespace NPOI.DumpExcel
                     il.Emit(OpCodes.Ldloc, style);
                     il.Emit(OpCodes.Ldloc, dataFormat);
                     il.Emit(OpCodes.Ldstr, format.CellFormat.Format);
-                    il.Emit(OpCodes.Call, method_GetFormat);
+                    il.Emit(OpCodes.Callvirt, method_GetFormat);
                     il.Emit(OpCodes.Callvirt, prop_DataFormat.GetSetMethod());
                 }
 
@@ -224,7 +224,7 @@ namespace NPOI.DumpExcel
                     il.Emit(OpCodes.Ldfld, sheet);
                     il.Emit(OpCodes.Ldc_I4, prop.ColumnIndex);
                     il.Emit(OpCodes.Ldloc, style);
-                    il.Emit(OpCodes.Call, method_SetDefaultColumnStyle);
+                    il.Emit(OpCodes.Callvirt, method_SetDefaultColumnStyle);
                 }
             }
 
@@ -301,7 +301,7 @@ namespace NPOI.DumpExcel
                 il.Emit(OpCodes.Stloc, cell);
                 il.Emit(OpCodes.Ldloc, cell);
                 il.Emit(OpCodes.Ldstr, prop.HeaderName);
-                il.Emit(OpCodes.Call, setCellValues[2]);
+                il.Emit(OpCodes.Callvirt, setCellValues[2]);
             }
 
             il.Emit(OpCodes.Nop);
@@ -319,32 +319,34 @@ namespace NPOI.DumpExcel
         /// <param name="properties"></param>
         private static void EmitCreateRow(TypeBuilder builder, Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
         {
+            var type = baseType.GetGenericArguments()[0];
             var methodBuilder = builder.DefineMethod("CreateRow",
                 MethodAttributes.PrivateScope | MethodAttributes.Family | MethodAttributes.ReuseSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig,
                 null,
-                new Type[] { baseType.GetGenericArguments()[0] });
+                new Type[] { type });
 
             var il = methodBuilder.GetILGenerator();
             var row = il.DeclareLocal(typeof(IRow));  // 定義一個local變數
             il.Emit(OpCodes.Nop);
 
+            var rowNum = il.DeclareLocal(typeof(int));
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, sheet);
+            il.Emit(OpCodes.Callvirt, physicalNumberOfRows);
+            il.Emit(OpCodes.Stloc, rowNum);
+            il.Emit(OpCodes.Nop);
+
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, sheet);
-            il.Emit(OpCodes.Call, physicalNumberOfRows);
+            il.Emit(OpCodes.Ldloc, rowNum);
             il.Emit(OpCodes.Callvirt, createRow);
             il.Emit(OpCodes.Stloc, row); // loc_0 當做row
+            il.Emit(OpCodes.Nop);
 
-            for (var i = 0; i < properties.Count(); i++)
+            var cell = il.DeclareLocal(typeof(ICell));
+            foreach (var property in properties)
             {
-                var property = properties.ElementAt(i);
-                var cell = il.DeclareLocal(typeof(ICell));
-                il.Emit(OpCodes.Ldloc, row);
-                il.Emit(OpCodes.Ldc_I4, i);
-                il.Emit(OpCodes.Callvirt, createCell);
-                il.Emit(OpCodes.Stloc, cell);
-                SetCellValue(property, il, cell);
+                CreateCell(il, row, cell, property);
             }
 
             il.Emit(OpCodes.Nop);
@@ -353,18 +355,52 @@ namespace NPOI.DumpExcel
                 baseType.GetMethod("CreateRow", BindingFlags.NonPublic | BindingFlags.Instance));
         }
 
-        /// <summary>
-        /// 設定CellValue
-        /// </summary>
-        /// <param name="property"></param>
-        /// <param name="il"></param>
-        /// <param name="cell"></param>
-        private static void SetCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
+        private static void CreateCell(ILGenerator il, LocalBuilder row, LocalBuilder cell, PropertyModel property)
         {
-            il.Emit(OpCodes.Ldloc, cell);
+            il.Emit(OpCodes.Ldloc, row);
+            il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
+            il.Emit(OpCodes.Callvirt, createCell);
+            il.Emit(OpCodes.Stloc, cell);
+            il.Emit(OpCodes.Nop);
+
+            var val = il.DeclareLocal(property.PropertyType);
             il.Emit(OpCodes.Ldarg_1);
             il.Emit(OpCodes.Callvirt, property.GetMethod);
-            switch (property.PropertyType.Name)
+            il.Emit(OpCodes.Stloc, val);
+
+            var underlayingType = Nullable.GetUnderlyingType(property.PropertyType);
+            if (underlayingType != null)
+            {
+                var realValue = il.DeclareLocal(underlayingType);
+                var inequal = il.DeclareLocal(typeof(bool));
+                var lbl = il.DefineLabel();
+                il.Emit(OpCodes.Ldloca, val);
+                il.Emit(OpCodes.Callvirt, property.PropertyType.GetProperty("HasValue").GetGetMethod());
+                il.Emit(OpCodes.Brfalse_S, lbl);
+                il.Emit(OpCodes.Nop);
+
+                il.Emit(OpCodes.Ldloca, val);
+                il.Emit(OpCodes.Call, property.PropertyType.GetMethod("GetValueOrDefault", Type.EmptyTypes));
+                il.Emit(OpCodes.Stloc, realValue);
+
+                SetCellValue(il, cell, realValue);
+
+                il.MarkLabel(lbl);
+                il.Emit(OpCodes.Nop);
+            }
+            else
+            {
+                SetCellValue(il, cell, val);
+            }
+
+            il.Emit(OpCodes.Nop);
+        }
+
+        private static void SetCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val, string typeName = null)
+        {
+            il.Emit(OpCodes.Ldloc, cell);
+            il.Emit(OpCodes.Ldloc, val);
+            switch (typeName ?? val.LocalType.Name)
             {
                 case "Int16":
                 case "Int32":
@@ -375,53 +411,36 @@ namespace NPOI.DumpExcel
                 case "Short":
                 case "Double":
                 case "Single":
-                    SetNumericCellValue(property, il, cell);
+                    SetNumericCellValue(il, cell, val);
                     break;
                 case "DateTime":
-                    SetDateTimeCellValue(property, il, cell);
+                    SetDateTimeCellValue(il, cell, val);
                     break;
                 case "Boolean":
-                    SetBooleanCellValue(property, il, cell);
+                    SetBooleanCellValue(il, cell, val);
                     break;
                 default:
-                    SetStringCellValue(property, il, cell);
+                    SetStringCellValue(il, cell, val);
                     break;
             }
         }
 
-        //private static Action<PropertyInfo, ILGenerator, ICell> GetSetCellValueMethod(Type propertyType)
-        //{
-        //    if (propertyType.IsNested == false)
-        //    {
-        //        if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Nullable<>))
-        //        {
-        //            return GetSetCellValueMethod(propertyType.GenericTypeArguments[0]);
-        //        }
-
-        //        if (propertyType.IsPrimitive == false)
-        //        {
-
-        //        }
-        //    }
-        //    return null;
-        //}
-
-        private static void SetNumericCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
+        private static void SetNumericCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
             il.Emit(OpCodes.Conv_R8); // convert to double;
-            il.Emit(OpCodes.Call, setCellValues[0]);
+            il.Emit(OpCodes.Callvirt, setCellValues[0]);
         }
 
-        private static void SetDateTimeCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
+        private static void SetDateTimeCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
-            il.Emit(OpCodes.Call, setCellValues[1]);
+            il.Emit(OpCodes.Callvirt, setCellValues[1]);
         }
 
-        private static void SetStringCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
+        private static void SetStringCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
-            if (property.PropertyType != typeof(string))
+            if (val.LocalType != typeof(string))
             {
-                il.Emit(OpCodes.Box, property.PropertyType);
+                il.Emit(OpCodes.Box, val.LocalType);
                 il.Emit(OpCodes.Call,
                     typeof(System.Convert).GetMethod("ToString",
                         BindingFlags.Public | BindingFlags.Static,
@@ -430,12 +449,12 @@ namespace NPOI.DumpExcel
                         new Type[] { typeof(object) },
                         null));
             }
-            il.Emit(OpCodes.Call, setCellValues[2]);
+            il.Emit(OpCodes.Callvirt, setCellValues[2]);
         }
 
-        private static void SetBooleanCellValue(PropertyModel property, ILGenerator il, LocalBuilder cell)
+        private static void SetBooleanCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
-            il.Emit(OpCodes.Call, setCellValues[3]);
+            il.Emit(OpCodes.Callvirt, setCellValues[3]);
         }
     }
 }

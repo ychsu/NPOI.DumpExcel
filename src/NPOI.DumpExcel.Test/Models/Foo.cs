@@ -20,8 +20,11 @@ namespace NPOI.DumpExcel.Test.Models
         public Enum1 Enum0 { get; set; }
         [ExcelColumn]
         public Enum1 Enum1 { get; set; }
-        [ExcelColumn(Format: "yyyy-MM-dd")]
-        public DateTime DT { get; set; }
+        [ExcelColumn(Format: "yyyy-MM-dd", Width: 20)]
+        public DateTime? DT { get; set; }
+
+        [ExcelColumn(Format: "yyyy-MM-dd", Width: 20)]
+        public DateTime DT2 { get; set; } = DateTime.Now;
     }
 
     public enum Enum1
