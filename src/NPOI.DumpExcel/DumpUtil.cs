@@ -107,7 +107,7 @@ namespace NPOI.DumpExcel
 
             var serviceType = typeBuilder.CreateType();
 
-#if DEBUG
+#if SAVEASSEMBLY
             assemblyBuilder.Save("YC.NPOI.DumpExcel.dll");
 #endif
             return serviceType;
@@ -248,6 +248,7 @@ namespace NPOI.DumpExcel
             var il = methodBuilder.GetILGenerator();
 
             il.Emit(OpCodes.Nop);
+
             for (int i = 0; i < properties.Count(); i++)
             {
                 var prop = properties.ElementAt(i);
@@ -361,6 +362,15 @@ namespace NPOI.DumpExcel
             il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
             il.Emit(OpCodes.Callvirt, createCell);
             il.Emit(OpCodes.Stloc, cell);
+
+            #region NPOI 2.3前 匯出xlsx會有吃不到 DefaultColumnStyle 的問題
+            il.Emit(OpCodes.Ldloc, cell);
+            il.Emit(OpCodes.Ldloc, row);
+            il.Emit(OpCodes.Callvirt, typeof(IRow).GetProperty("Sheet").GetGetMethod());
+            il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
+            il.Emit(OpCodes.Callvirt, typeof(ISheet).GetMethod("GetColumnStyle"));
+            il.Emit(OpCodes.Callvirt, typeof(ICell).GetProperty("CellStyle").GetSetMethod());
+            #endregion
             il.Emit(OpCodes.Nop);
 
             var val = il.DeclareLocal(property.PropertyType);
@@ -392,7 +402,6 @@ namespace NPOI.DumpExcel
             {
                 SetCellValue(il, cell, val);
             }
-
             il.Emit(OpCodes.Nop);
         }
 

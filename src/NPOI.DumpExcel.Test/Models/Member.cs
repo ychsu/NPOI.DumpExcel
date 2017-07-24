@@ -20,12 +20,12 @@ namespace NPOI.DumpExcel.Test.Models
         public DateTime UpdateOn { get; set; }
         [ExcelColumn(Order = 5)]
         public int Age { get; set; }
-        [ExcelColumn(Order: 4, Format: "#,#.0000")]
+        [ExcelColumn(Order: 4, Format: "#,#.0000", Width: 15)]
         public decimal Height { get; set; }
         [ExcelColumn(Order = 3)]
         public Gender Gender { get; set; }
 
-        [ExcelColumn(Order: 6, Format: @"yyyy\-mm\-dd")]
+        [ExcelColumn(Order: 6, Format: @"yyyy-MM-dd", Width: 15)]
         public DateTime? Birthday { get; set; }
     }
 

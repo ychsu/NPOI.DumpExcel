@@ -37,7 +37,7 @@ namespace NPOI.DumpExcel
         /// </summary>
         /// <param name="enumerable"></param>
         /// <returns></returns>
-        public IWorkbook DumpWorkbook(IEnumerable<T> enumerable)
+        public virtual IWorkbook DumpWorkbook(IEnumerable<T> enumerable)
         {
             CreateHeaderRow();
             foreach (var item in enumerable)
