@@ -402,6 +402,11 @@ namespace NPOI.DumpExcel
             il.Emit(OpCodes.Ldloc, val);
             switch (typeName ?? val.LocalType.Name)
             {
+                case "Decimal":
+                    il.Emit(OpCodes.Call, 
+                        typeof(Decimal).GetMethod("ToDouble", BindingFlags.Static | BindingFlags.Public));
+                    SetNumericCellValue(il, cell, val);
+                    break;
                 case "Int16":
                 case "Int32":
                 case "Int64":

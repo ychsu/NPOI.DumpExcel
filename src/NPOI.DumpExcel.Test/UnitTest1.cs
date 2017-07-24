@@ -25,7 +25,30 @@ namespace NPOI.DumpExcel.Test
 
             var workbook = enumerable.DumpXLS();
 
-            using (var fs = new FileStream("./excel.xls", FileMode.Create))
+            using (var fs = new FileStream("./DumpEnumerableToExcel.xls", FileMode.Create))
+            {
+                workbook.Write(fs);
+            }
+        }
+        [TestMethod]
+        public void DumpEnumerableToExcel2()
+        {
+            var enumerable = Enumerable.Range(1, 10000)
+                .Select(p => new Member
+                {
+                    FirstName = "Foo",
+                    LastName = "Foo",
+                    Age = 18,
+                    Birthday = DateTime.Now.AddYears(-18),
+                    Gender = p % 2 == 0 ? Gender.Female : Gender.Male,
+                    Height = 170,
+                    IsMarried = p / 2 % 2 == 0,
+                    UpdateOn = DateTime.Now
+                });
+
+            var workbook = enumerable.DumpXLSX();
+
+            using (var fs = new FileStream("./DumpEnumerableToExcel2.xlsx", FileMode.Create))
             {
                 workbook.Write(fs);
             }
