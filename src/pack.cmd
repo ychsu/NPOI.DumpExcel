@@ -1,1 +1,1 @@
-.nuget\nuget.exe pack NPOI.DumpExcel\NPOI.DumpExcel.csproj -Build -Properties Configuration=Release -OutputDirectory pack\
+..\.nuget\nuget.exe pack -OutputDirectory ..\pack\
