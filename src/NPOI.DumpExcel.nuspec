@@ -1,26 +1,26 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <package >
 	<metadata>
-    <id>NPOI.DumpExcel</id>
-    <version>1.2.1.1</version>
+		<id>NPOI.DumpExcel</id>
+		<version>1.2.2</version>
 		<title>NPOI.DumpExcel</title>
 		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
 		<authors>YC</authors>
 		<owners>YC</owners>
 		<projectUrl>https://github.com/ychsu/NPOI.DumpExcel</projectUrl>
-    <licenseUrl>https://github.com/ychsu/YC.Http.Formatting.Multipart/blob/master/LICENSE</licenseUrl>
+		<licenseUrl>https://github.com/ychsu/YC.Http.Formatting.Multipart/blob/master/LICENSE</licenseUrl>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<releaseNotes>
-			DumpExcel 增加一個多載, 可以傳入IWorkbook. (等同可以讓同一個Workbook中有多個Sheets)
+			支援DateTimeOffset
 		</releaseNotes>
 		<copyright>Copyright 2017</copyright>
 		<tags>npoi, IEnumerable&lt;T&gt;</tags>
-    <dependencies>
-      <dependency id="NPOI" version="2.1.3.1" />
-    </dependencies>
+		<dependencies>
+			<dependency id="NPOI" version="2.1.3.1" />
+		</dependencies>
 	</metadata>
-  <files>
-    <file src="NPOI.DumpExcel\bin\Release\NPOI.DumpExcel.*" target="lib\net45\" />
-    <file src="NPOI.DumpExcel40\bin\Release\NPOI.DumpExcel.*" target="lib\net40\" />
-  </files>
+	<files>
+		<file src="NPOI.DumpExcel\bin\Release\NPOI.DumpExcel.*" target="lib\net45\" />
+		<file src="NPOI.DumpExcel40\bin\Release\NPOI.DumpExcel.*" target="lib\net40\" />
+	</files>
 </package>

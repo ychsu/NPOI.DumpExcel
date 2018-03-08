@@ -23,6 +23,7 @@ namespace NPOI.DumpExcel
         private static MethodInfo physicalNumberOfRows;
         private static MethodInfo createCell;
         private static MethodInfo[] setCellValues; // 會放在static是犧牲記憶體求取效能
+        private static MethodInfo getLocalDateTime;
         static DumpUtil()
         {
             var sheetType = typeof(ISheet);
@@ -42,6 +43,7 @@ namespace NPOI.DumpExcel
                 cellType.GetMethod("SetCellValue", new Type[] { typeof(string) }),
                 cellType.GetMethod("SetCellValue", new Type[] { typeof(bool) })
             };
+            getLocalDateTime = typeof(DateTimeOffset).GetMethod("get_LocalDateTime");
         }
 
         /// <summary>
@@ -408,11 +410,11 @@ namespace NPOI.DumpExcel
         private static void SetCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val, string typeName = null)
         {
             il.Emit(OpCodes.Ldloc, cell);
-            il.Emit(OpCodes.Ldloc, val);
+                    il.Emit(OpCodes.Ldloc, val);
             switch (typeName ?? val.LocalType.Name)
             {
                 case "Decimal":
-                    il.Emit(OpCodes.Call, 
+                    il.Emit(OpCodes.Call,
                         typeof(Decimal).GetMethod("ToDouble", BindingFlags.Static | BindingFlags.Public));
                     SetNumericCellValue(il, cell, val);
                     break;
@@ -426,6 +428,12 @@ namespace NPOI.DumpExcel
                 case "Double":
                 case "Single":
                     SetNumericCellValue(il, cell, val);
+                    break;
+                case nameof(DateTimeOffset):
+                    il.Emit(OpCodes.Pop);
+                    il.Emit(OpCodes.Ldloca_S, val);
+                    il.Emit(OpCodes.Call, typeof(DateTimeOffset).GetProperty("LocalDateTime").GetGetMethod());
+                    SetDateTimeCellValue(il, cell, val);
                     break;
                 case "DateTime":
                     SetDateTimeCellValue(il, cell, val);

@@ -21,7 +21,7 @@ namespace NPOI.DumpExcel.Test.Models
         [ExcelColumn]
         public Enum1 Enum1 { get; set; }
         [ExcelColumn(Format: "yyyy-MM-dd", Width: 20)]
-        public DateTime? DT { get; set; }
+        public DateTimeOffset? DT { get; set; }
 
         [ExcelColumn(Format: "yyyy-MM-dd", Width: 20)]
         public DateTime DT2 { get; set; } = DateTime.Now;

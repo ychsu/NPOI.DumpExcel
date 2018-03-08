@@ -15,7 +15,7 @@ namespace NPOI.DumpExcel.Test
             var enumerable = Enumerable.Range(1, 10)
                 .Select(p => new Foo
                 {
-                    DT = p % 2 == 0 ? new DateTime?(DateTime.Now.AddDays(p)) : null,
+                    DT = p % 2 == 0 ? new DateTimeOffset?(DateTimeOffset.Now.AddDays(p)) : null,
                     DT2 = DateTime.Now.AddDays(p),
                     Enum0 = Enum1.AAAAAAAAAAAAAAAAAAAAAA,
                     Enum1 = Enum1.BBBBBBBBBBBBBBBBBBBBBB,
@@ -62,7 +62,7 @@ namespace NPOI.DumpExcel.Test
                 Foos = Enumerable.Range(1, 10)
                 .Select(p => new Foo
                 {
-                    DT = p % 2 == 0 ? new DateTime?(DateTime.Now.AddDays(p)) : null,
+                    DT = p % 2 == 0 ? new DateTimeOffset?(DateTimeOffset.Now.AddDays(p)) : null,
                     DT2 = DateTime.Now.AddDays(p),
                     Enum0 = Enum1.AAAAAAAAAAAAAAAAAAAAAA,
                     Enum1 = Enum1.BBBBBBBBBBBBBBBBBBBBBB,
