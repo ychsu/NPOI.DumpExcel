@@ -2,7 +2,7 @@
 <package >
 	<metadata>
     <id>NPOI.DumpExcel</id>
-    <version>1.2.1</version>
+    <version>1.2.1.1</version>
 		<title>NPOI.DumpExcel</title>
 		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
 		<authors>YC</authors>
