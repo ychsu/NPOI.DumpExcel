@@ -2,13 +2,15 @@
 <package >
 	<metadata>
     <id>NPOI.DumpExcel</id>
-    <version>1.1.2</version>
+    <version>1.2.0</version>
 		<title>NPOI.DumpExcel</title>
 		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
 		<authors>YC</authors>
 		<owners>YC</owners>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
-		<releaseNotes></releaseNotes>
+		<releaseNotes>
+			DumpExcel 增加一個多載, 可以傳入IWorkbook. (等同可以讓同一個Workbook中有多個Sheets)
+		</releaseNotes>
 		<copyright>Copyright 2017</copyright>
 		<tags>npoi, IEnumerable&lt;T&gt;</tags>
     <dependencies>

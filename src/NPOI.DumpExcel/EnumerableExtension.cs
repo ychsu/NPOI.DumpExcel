@@ -16,6 +16,17 @@ namespace NPOI.DumpExcel
             _dumpServices = new Dictionary<string, Type>();
         }
 
+        public static IWorkbook DumpExcel<T>(this IEnumerable<T> enumerable, 
+            IWorkbook workbook)
+        {
+            var type = typeof(T);
+            var dumpServType = FindService(type);
+
+            var dumpServ = Activator.CreateInstance(dumpServType, new object[] { workbook }) as IDumpService<T>;
+
+            return dumpServ.DumpWorkbook(enumerable);
+        }
+
         /// <summary>
         /// Dump enumerable 成workbook
         /// </summary>
@@ -28,12 +39,8 @@ namespace NPOI.DumpExcel
             var workbook = excelType == ExcelType.XLSX ?
                 new NPOI.XSSF.UserModel.XSSFWorkbook() as IWorkbook :
                 new NPOI.HSSF.UserModel.HSSFWorkbook();
-            var type = typeof(T);
-            var dumpServType = FindService(type);
 
-            var dumpServ = Activator.CreateInstance(dumpServType, new object[] { workbook }) as IDumpService<T>;
-
-            return dumpServ.DumpWorkbook(enumerable);
+            return enumerable.DumpExcel(workbook);
         }
 
 

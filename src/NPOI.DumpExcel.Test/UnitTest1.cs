@@ -53,5 +53,43 @@ namespace NPOI.DumpExcel.Test
                 workbook.Write(fs);
             }
         }
+
+        [TestMethod]
+        public void Dump2Sheets()
+        {
+            var parent = new Parent
+            {
+                Foos = Enumerable.Range(1, 10)
+                .Select(p => new Foo
+                {
+                    DT = p % 2 == 0 ? new DateTime?(DateTime.Now.AddDays(p)) : null,
+                    DT2 = DateTime.Now.AddDays(p),
+                    Enum0 = Enum1.AAAAAAAAAAAAAAAAAAAAAA,
+                    Enum1 = Enum1.BBBBBBBBBBBBBBBBBBBBBB,
+                    Name = $"Foo{p}",
+                    SerId = p
+                }),
+                Members = Enumerable.Range(1, 10000)
+                .Select(p => new Member
+                {
+                    FirstName = "Foo",
+                    LastName = "Foo",
+                    Age = 18,
+                    Birthday = DateTime.Now.AddYears(-18),
+                    Gender = p % 2 == 0 ? Gender.Female : Gender.Male,
+                    Height = 170,
+                    IsMarried = p / 2 % 2 == 0,
+                    UpdateOn = DateTime.Now
+                })
+            };
+
+            var workbook = parent.Foos.DumpXLSX();
+            workbook = parent.Members.DumpExcel(workbook);
+
+            using (var fs = new FileStream("./DumpEnumerableToExcel3.xlsx", FileMode.Create))
+            {
+                workbook.Write(fs);
+            }
+        }
     }
 }
