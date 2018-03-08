@@ -7,6 +7,8 @@
 		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
 		<authors>YC</authors>
 		<owners>YC</owners>
+		<projectUrl>https://github.com/ychsu/NPOI.DumpExcel</projectUrl>
+    <licenseUrl>https://github.com/ychsu/YC.Http.Formatting.Multipart/blob/master/LICENSE</licenseUrl>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<releaseNotes>
 			DumpExcel 增加一個多載, 可以傳入IWorkbook. (等同可以讓同一個Workbook中有多個Sheets)
