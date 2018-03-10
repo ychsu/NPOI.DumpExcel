@@ -53,6 +53,15 @@ namespace NPOI.DumpExcel
         /// <returns></returns>
         internal static Type CreateService(Type type)
         {
+            var util = new DumpUtil();
+            return util.CreateServiceType(type);
+        }
+
+        private TypeBuilder builder;
+        private IList<FieldBuilder> fields;
+
+        private Type CreateServiceType(Type type)
+        {
             var sheetname = type.GetCustomAttribute<SheetAttribute>()?.Name ?? type.Name;
             var baseType = typeof(DumpServiceBase<>).MakeGenericType(type);
             var @interface = typeof(IDumpService<>).MakeGenericType(type);
@@ -61,10 +70,11 @@ namespace NPOI.DumpExcel
             {
                 className = $"{type.Namespace}.{className}";
             }
-            var typeBuilder = moduleBuilder.DefineType(className,
+            this.builder = moduleBuilder.DefineType(className,
                 TypeAttributes.Sealed | TypeAttributes.Public | TypeAttributes.Class,
                 baseType,
                 new Type[] { @interface });
+            this.fields = new List<FieldBuilder>();
 
 
             var properties = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
@@ -90,24 +100,28 @@ namespace NPOI.DumpExcel
                 .ToList();
 
             #region filed 
-            var sheet = typeBuilder.DefineField("sheet", typeof(ISheet), FieldAttributes.Private);
+            var sheet = this.builder.DefineField("sheet", typeof(ISheet), FieldAttributes.Private);
+            this.fields.Add(sheet);
             #endregion
 
-            var emitSetColumnsStyle = EmitSetColumnsStyle(typeBuilder, sheet, properties);
+            var emitInitEmunFactories = this.EmitInitEmunFactories(properties);
 
-            var emitSetColumnsWidth = EmitSetColumnsWidth(typeBuilder, sheet, properties);
+            var emitSetColumnsStyle = this.EmitSetColumnsStyle(sheet, properties);
 
-            EmitConstructor(sheetname, baseType, typeBuilder, new MethodBuilder[]
+            var emitSetColumnsWidth = this.EmitSetColumnsWidth(sheet, properties);
+
+            this.EmitConstructor(sheetname, baseType, new MethodBuilder[]
             {
+                emitInitEmunFactories,
                 emitSetColumnsStyle,
                 emitSetColumnsWidth
             }, properties, sheet);
 
-            EmitCreateHeaderRow(typeBuilder, baseType, sheet, properties);
+            this.EmitCreateHeaderRow(baseType, sheet, properties);
 
-            EmitCreateRow(typeBuilder, baseType, sheet, properties);
+            this.EmitCreateRow(baseType, sheet, properties);
 
-            var serviceType = typeBuilder.CreateType();
+            var serviceType = this.builder.CreateType();
 
 #if SAVEASSEMBLY
             assemblyBuilder.Save("YC.NPOI.DumpExcel.dll");
@@ -120,14 +134,13 @@ namespace NPOI.DumpExcel
         /// </summary>
         /// <param name="sheetname"></param>
         /// <param name="baseType"></param>
-        /// <param name="typeBuilder"></param>
         /// <param name="properties"></param>
         /// <param name="sheet"></param>
         /// <param name="styles"></param>
-        private static void EmitConstructor(string sheetname, Type baseType, TypeBuilder typeBuilder, IEnumerable<MethodBuilder> methods, IList<PropertyModel> properties, FieldBuilder sheet)
+        private void EmitConstructor(string sheetname, Type baseType, IEnumerable<MethodBuilder> methods, IList<PropertyModel> properties, FieldBuilder sheet)
         {
             var constructParameterType = typeof(IWorkbook);
-            var constructBuilder = typeBuilder.DefineConstructor(
+            var constructBuilder = this.builder.DefineConstructor(
                 MethodAttributes.Public | MethodAttributes.PrivateScope,
                 CallingConventions.Standard,
                 new Type[] { constructParameterType });
@@ -156,17 +169,69 @@ namespace NPOI.DumpExcel
             }
         }
 
-        private static MethodBuilder EmitSetColumnsStyle(TypeBuilder builder, FieldBuilder sheet, IList<PropertyModel> properties)
+        private MethodBuilder EmitInitEmunFactories(IList<PropertyModel> properties)
+        {
+            var methodBuilder = builder.DefineMethod("InitEnumFactories",
+                MethodAttributes.Private | MethodAttributes.PrivateScope);
+            var enumTypes = properties.Where(p => p.PropertyType.IsEnum)
+                .Select(p => p.PropertyType)
+                .Distinct();
+
+            var il = methodBuilder.GetILGenerator();
+
+            il.Emit(OpCodes.Nop);
+
+            foreach (var type in enumTypes)
+            {
+                var factory = builder.DefineField(type.Name + "DisplayNameFactory",
+                    typeof(IDictionary<,>).MakeGenericType(type, typeof(string)),
+                    FieldAttributes.Private | FieldAttributes.Static);
+                this.fields.Add(factory);
+                var factoryType = typeof(Dictionary<,>).MakeGenericType(type, typeof(string));
+                il.Emit(OpCodes.Newobj, factoryType.GetConstructor(Type.EmptyTypes));
+                var setItemMethod = factoryType.GetMethod("set_Item");
+
+                foreach (var e in type.GetEnumValues())
+                {
+                    il.Emit(OpCodes.Dup);
+                    il.Emit(OpCodes.Ldc_I4, (int)e);
+                    il.Emit(OpCodes.Ldstr, GetEnumDisplayName(type, e.ToString()));
+                    il.Emit(OpCodes.Callvirt, setItemMethod);
+                    il.Emit(OpCodes.Nop);
+                }
+
+                il.Emit(OpCodes.Stsfld, factory);
+            }
+
+            il.Emit(OpCodes.Ret);
+
+            return methodBuilder;
+        }
+
+        private string GetEnumDisplayName(Type type, string v)
+        {
+#if NET45
+            var field = type.GetField(v);
+            var displayAttribute = field?.GetCustomAttribute<DisplayAttribute>(inherit: false);
+            if (displayAttribute != null)
+            {
+                return displayAttribute.GetName();
+            }
+#endif
+            return v;
+        }
+
+        private MethodBuilder EmitSetColumnsStyle(FieldBuilder sheet, IList<PropertyModel> properties)
         {
             var methodBuilder = builder.DefineMethod("SetColumnsStyle",
                 MethodAttributes.Private | MethodAttributes.PrivateScope);
 
             var il = methodBuilder.GetILGenerator();
 
-            #region local variables
+#region local variables
             var dataFormat = il.DeclareLocal(typeof(IDataFormat));
             var style = il.DeclareLocal(typeof(ICellStyle));
-            #endregion
+#endregion
 
             var method_CreateDataFormat = typeof(IWorkbook).GetMethod("CreateDataFormat", new Type[] { });
             var method_GetFormat = typeof(IDataFormat).GetMethod("GetFormat", new Type[] { typeof(string) });
@@ -179,13 +244,13 @@ namespace NPOI.DumpExcel
 
             il.Emit(OpCodes.Nop);
 
-            #region CreateDataFormat;
+#region CreateDataFormat;
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, sheet);
             il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
             il.Emit(OpCodes.Callvirt, method_CreateDataFormat);
             il.Emit(OpCodes.Stloc, dataFormat);
-            #endregion
+#endregion
 
             var groupByFormat = properties.GroupBy(p => p.CellFormatter)
                 .Select(g => new
@@ -242,7 +307,7 @@ namespace NPOI.DumpExcel
         /// <param name="builder"></param>
         /// <param name="sheet"></param>
         /// <param name="properties"></param>
-        private static MethodBuilder EmitSetColumnsWidth(TypeBuilder builder, FieldBuilder sheet, IList<PropertyModel> properties)
+        private MethodBuilder EmitSetColumnsWidth(FieldBuilder sheet, IList<PropertyModel> properties)
         {
             var methodBuilder = builder.DefineMethod("SetColumnsWidth",
                 MethodAttributes.Private | MethodAttributes.PrivateScope);
@@ -278,7 +343,7 @@ namespace NPOI.DumpExcel
         /// <param name="baseType"></param>
         /// <param name="sheet"></param>
         /// <param name="properties"></param>
-        private static void EmitCreateHeaderRow(TypeBuilder builder, Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
+        private void EmitCreateHeaderRow(Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
         {
             var methodBuilder = builder.DefineMethod("CreateHeaderRow",
                 MethodAttributes.PrivateScope | MethodAttributes.Family | MethodAttributes.ReuseSlot | MethodAttributes.Virtual | MethodAttributes.HideBySig);
@@ -320,7 +385,7 @@ namespace NPOI.DumpExcel
         /// <param name="baseType"></param>
         /// <param name="sheet"></param>
         /// <param name="properties"></param>
-        private static void EmitCreateRow(TypeBuilder builder, Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
+        private void EmitCreateRow(Type baseType, FieldBuilder sheet, IEnumerable<PropertyModel> properties)
         {
             var type = baseType.GetGenericArguments()[0];
             var methodBuilder = builder.DefineMethod("CreateRow",
@@ -349,7 +414,7 @@ namespace NPOI.DumpExcel
             var cell = il.DeclareLocal(typeof(ICell));
             foreach (var property in properties)
             {
-                CreateCell(il, row, cell, property);
+                this.CreateCell(il, row, cell, property);
             }
 
             il.Emit(OpCodes.Nop);
@@ -358,21 +423,21 @@ namespace NPOI.DumpExcel
                 baseType.GetMethod("CreateRow", BindingFlags.NonPublic | BindingFlags.Instance));
         }
 
-        private static void CreateCell(ILGenerator il, LocalBuilder row, LocalBuilder cell, PropertyModel property)
+        private void CreateCell(ILGenerator il, LocalBuilder row, LocalBuilder cell, PropertyModel property)
         {
             il.Emit(OpCodes.Ldloc, row);
             il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
             il.Emit(OpCodes.Callvirt, createCell);
             il.Emit(OpCodes.Stloc, cell);
 
-            #region NPOI 2.3前 匯出xlsx會有吃不到 DefaultColumnStyle 的問題
+#region NPOI 2.3前 匯出xlsx會有吃不到 DefaultColumnStyle 的問題
             il.Emit(OpCodes.Ldloc, cell);
             il.Emit(OpCodes.Ldloc, row);
             il.Emit(OpCodes.Callvirt, typeof(IRow).GetProperty("Sheet").GetGetMethod());
             il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
             il.Emit(OpCodes.Callvirt, typeof(ISheet).GetMethod("GetColumnStyle"));
             il.Emit(OpCodes.Callvirt, typeof(ICell).GetProperty("CellStyle").GetSetMethod());
-            #endregion
+#endregion
             il.Emit(OpCodes.Nop);
 
             var val = il.DeclareLocal(property.PropertyType);
@@ -395,28 +460,28 @@ namespace NPOI.DumpExcel
                 il.Emit(OpCodes.Call, property.PropertyType.GetMethod("GetValueOrDefault", Type.EmptyTypes));
                 il.Emit(OpCodes.Stloc, realValue);
 
-                SetCellValue(il, cell, realValue);
+                this.SetCellValue(il, cell, realValue);
 
                 il.MarkLabel(lbl);
                 il.Emit(OpCodes.Nop);
             }
             else
             {
-                SetCellValue(il, cell, val);
+                this.SetCellValue(il, cell, val);
             }
             il.Emit(OpCodes.Nop);
         }
 
-        private static void SetCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val, string typeName = null)
+        private void SetCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val, string typeName = null)
         {
             il.Emit(OpCodes.Ldloc, cell);
-                    il.Emit(OpCodes.Ldloc, val);
+            il.Emit(OpCodes.Ldloc, val);
             switch (typeName ?? val.LocalType.Name)
             {
                 case "Decimal":
                     il.Emit(OpCodes.Call,
                         typeof(Decimal).GetMethod("ToDouble", BindingFlags.Static | BindingFlags.Public));
-                    SetNumericCellValue(il, cell, val);
+                    this.SetNumericCellValue(il, cell, val);
                     break;
                 case "Int16":
                 case "Int32":
@@ -427,38 +492,62 @@ namespace NPOI.DumpExcel
                 case "Short":
                 case "Double":
                 case "Single":
-                    SetNumericCellValue(il, cell, val);
+                    this.SetNumericCellValue(il, cell, val);
                     break;
                 case nameof(DateTimeOffset):
-                    il.Emit(OpCodes.Pop);
-                    il.Emit(OpCodes.Ldloca_S, val);
-                    il.Emit(OpCodes.Call, typeof(DateTimeOffset).GetProperty("LocalDateTime").GetGetMethod());
-                    SetDateTimeCellValue(il, cell, val);
+                    this.SetDateTimeOffsetCellValue(il, cell, val);
                     break;
                 case "DateTime":
-                    SetDateTimeCellValue(il, cell, val);
+                    this.SetDateTimeCellValue(il, cell, val);
                     break;
                 case "Boolean":
-                    SetBooleanCellValue(il, cell, val);
+                    this.SetBooleanCellValue(il, cell, val);
                     break;
                 default:
-                    SetStringCellValue(il, cell, val);
+                    if (val.LocalType.IsEnum == true)
+                    {
+                        this.SetEnumCellValue(il, cell, val);
+                    }
+                    else
+                    {
+                        this.SetStringCellValue(il, cell, val);
+                    }
                     break;
             }
         }
 
-        private static void SetNumericCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        private void SetEnumCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        {
+            var factory = this.fields.FirstOrDefault(p => p.Name == val.LocalType.Name + "DisplayNameFactory");
+            var getItemMethod = factory.FieldType.GetMethod("get_Item");
+            il.Emit(OpCodes.Pop);
+            var variable = il.DeclareLocal(typeof(string));
+            il.Emit(OpCodes.Ldsfld, factory);
+            il.Emit(OpCodes.Ldloc, val);
+            il.Emit(OpCodes.Callvirt, getItemMethod);
+            il.Emit(OpCodes.Callvirt, setCellValues[2]);
+        }
+
+        private void SetDateTimeOffsetCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        {
+            il.Emit(OpCodes.Pop);
+            il.Emit(OpCodes.Ldloca_S, val);
+            il.Emit(OpCodes.Call, typeof(DateTimeOffset).GetProperty("LocalDateTime").GetGetMethod());
+            SetDateTimeCellValue(il, cell, val);
+        }
+
+        private void SetNumericCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
             il.Emit(OpCodes.Conv_R8); // convert to double;
             il.Emit(OpCodes.Callvirt, setCellValues[0]);
         }
 
-        private static void SetDateTimeCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        private void SetDateTimeCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
             il.Emit(OpCodes.Callvirt, setCellValues[1]);
         }
 
-        private static void SetStringCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        private void SetStringCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
             if (val.LocalType != typeof(string))
             {
@@ -474,7 +563,7 @@ namespace NPOI.DumpExcel
             il.Emit(OpCodes.Callvirt, setCellValues[2]);
         }
 
-        private static void SetBooleanCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
+        private void SetBooleanCellValue(ILGenerator il, LocalBuilder cell, LocalBuilder val)
         {
             il.Emit(OpCodes.Callvirt, setCellValues[3]);
         }

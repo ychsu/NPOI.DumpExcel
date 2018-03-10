@@ -1,10 +1,7 @@
 ﻿using NPOI.DumpExcel.Attributes;
 using NPOI.SS.UserModel;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace NPOI.DumpExcel.Test.Models
 {
@@ -29,6 +26,7 @@ namespace NPOI.DumpExcel.Test.Models
 
     public enum Enum1
     {
+        [Display(Name = "我是A")]
         AAAAAAAAAAAAAAAAAAAAAA,
         BBBBBBBBBBBBBBBBBBBBBB
     }
