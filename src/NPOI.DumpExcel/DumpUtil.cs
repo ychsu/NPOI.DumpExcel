@@ -104,25 +104,13 @@ namespace NPOI.DumpExcel
             #region filed 
             #endregion
 
-            var emitInitEmunFactories = this.EmitInitEmunFactories();
+            this.EmitStaticConstructor(this.EmitInitEmunFactories());
 
-            var emitCreateSheet = this.EmitCreateSheet(sheetname);
-
-            var emitSetColumnsStyle = this.EmitSetColumnsStyle();
-
-            var emitSetColumnsWidth = this.EmitSetColumnsWidth();
-
-            this.EmitStaticConstructor(new MethodBuilder[]
-            {
-                emitInitEmunFactories
-            });
-
-            this.EmitConstructor(new MethodBuilder[]
-            {
-                emitCreateSheet,
-                emitSetColumnsStyle,
-                emitSetColumnsWidth
-            });
+            this.EmitConstructor(
+                sheetname,
+                this.EmitCreateSheet(),
+                this.EmitSetColumnsStyle(),
+                this.EmitSetColumnsWidth());
 
             this.EmitCreateHeaderRow();
 
@@ -136,7 +124,7 @@ namespace NPOI.DumpExcel
             return serviceType;
         }
 
-        private void EmitStaticConstructor(IEnumerable<MethodBuilder> methods)
+        private void EmitStaticConstructor(params MethodBuilder[] methods)
         {
             var constructBuilder = this.builder.DefineConstructor(
                 MethodAttributes.Static | MethodAttributes.Public,
@@ -162,19 +150,29 @@ namespace NPOI.DumpExcel
         /// 建立type的constructor
         /// </summary>
         /// <param name="styles"></param>
-        private void EmitConstructor(IEnumerable<MethodBuilder> methods)
+        private void EmitConstructor(string sheetName, params MethodBuilder[] methods)
         {
             var constructParameterType = typeof(IWorkbook);
             var constructBuilder = this.builder.DefineConstructor(
                 MethodAttributes.Public | MethodAttributes.PrivateScope,
                 CallingConventions.Standard,
-                new Type[] { constructParameterType });
+                new Type[] { constructParameterType, typeof(string) });
+            constructBuilder.DefineParameter(1, ParameterAttributes.In, "workbook");
+            constructBuilder.DefineParameter(2, ParameterAttributes.HasDefault, "sheetName");
+
             if (constructBuilder != null)
             {
                 var il = constructBuilder.GetILGenerator();
                 il.Emit(OpCodes.Ldarg_0);
                 il.Emit(OpCodes.Ldarg_1);
-                il.Emit(OpCodes.Call, this.builder.BaseType.GetConstructor(new Type[] { constructParameterType }));
+                var label = il.DefineLabel();
+                il.Emit(OpCodes.Ldarg_2);
+                il.Emit(OpCodes.Dup);
+                il.Emit(OpCodes.Brtrue_S, label);
+                il.Emit(OpCodes.Pop);
+                il.Emit(OpCodes.Ldstr, sheetName);
+                il.MarkLabel(label);
+                il.Emit(OpCodes.Call, this.builder.BaseType.GetConstructor(new Type[] { constructParameterType, typeof(string) }));
                 il.Emit(OpCodes.Nop);
 
                 foreach (var method in methods)
@@ -240,7 +238,12 @@ namespace NPOI.DumpExcel
             return v;
         }
 
-        private MethodBuilder EmitCreateSheet(string sheetname)
+        /// <summary>
+        /// 建立ISheet的method
+        /// </summary>
+        /// <param name="sheetname"></param>
+        /// <returns></returns>
+        private MethodBuilder EmitCreateSheet()
         {
             var methodBuilder = builder.DefineMethod("CreateSheet",
                 MethodAttributes.Private | MethodAttributes.PrivateScope);
@@ -250,11 +253,13 @@ namespace NPOI.DumpExcel
             this.sheet = this.builder.DefineField("sheet", typeof(ISheet), FieldAttributes.Private);
 
             il.Emit(OpCodes.Nop);
-            var workbook = builder.BaseType.GetField("workbook", BindingFlags.Instance | BindingFlags.NonPublic);
+            var workbook = this.builder.BaseType.GetField("workbook", BindingFlags.Instance | BindingFlags.NonPublic);
+            var sheetName = this.builder.BaseType.GetField("sheetName", BindingFlags.Instance | BindingFlags.NonPublic);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, workbook);
-            il.Emit(OpCodes.Ldstr, sheetname);
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldfld, sheetName);
             il.Emit(OpCodes.Callvirt, typeof(IWorkbook).GetMethod("CreateSheet", new Type[] { typeof(string) }));
             il.Emit(OpCodes.Stfld, sheet);
 

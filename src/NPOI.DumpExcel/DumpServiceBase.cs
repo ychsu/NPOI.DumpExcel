@@ -11,14 +11,16 @@ namespace NPOI.DumpExcel
     public abstract class DumpServiceBase<T> : IDumpService<T>
     {
         protected IWorkbook workbook;
+        protected string sheetName;
 
         /// <summary>
         /// constructor
         /// </summary>
         /// <param name="workbook">workbook</param>
-        public DumpServiceBase(IWorkbook workbook)
+        public DumpServiceBase(IWorkbook workbook, string sheetName)
         {
             this.workbook = workbook;
+            this.sheetName = sheetName;
         }
 
         /// <summary>

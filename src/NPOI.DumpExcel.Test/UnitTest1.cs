@@ -85,6 +85,7 @@ namespace NPOI.DumpExcel.Test
 
             var workbook = parent.Foos.DumpXLSX();
             workbook = parent.Members.DumpExcel(workbook);
+            workbook = parent.Members.DumpExcel(workbook, "複製出來der");
 
             using (var fs = new FileStream("./DumpEnumerableToExcel3.xlsx", FileMode.Create))
             {

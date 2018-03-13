@@ -17,12 +17,12 @@ namespace NPOI.DumpExcel
         }
 
         public static IWorkbook DumpExcel<T>(this IEnumerable<T> enumerable, 
-            IWorkbook workbook)
+            IWorkbook workbook, string sheetName = null)
         {
             var type = typeof(T);
             var dumpServType = FindService(type);
 
-            var dumpServ = Activator.CreateInstance(dumpServType, new object[] { workbook }) as IDumpService<T>;
+            var dumpServ = Activator.CreateInstance(dumpServType, new object[] { workbook, sheetName }) as IDumpService<T>;
 
             return dumpServ.DumpWorkbook(enumerable);
         }
@@ -34,13 +34,13 @@ namespace NPOI.DumpExcel
         /// <param name="enumerable"></param>
         /// <param name="excelType"></param>
         /// <returns></returns>
-        public static IWorkbook DumpExcel<T>(this IEnumerable<T> enumerable, ExcelType excelType)
+        public static IWorkbook DumpExcel<T>(this IEnumerable<T> enumerable, ExcelType excelType, string sheetName = null)
         {
             var workbook = excelType == ExcelType.XLSX ?
                 new NPOI.XSSF.UserModel.XSSFWorkbook() as IWorkbook :
                 new NPOI.HSSF.UserModel.HSSFWorkbook();
 
-            return enumerable.DumpExcel(workbook);
+            return enumerable.DumpExcel(workbook, sheetName);
         }
 
 
@@ -51,9 +51,9 @@ namespace NPOI.DumpExcel
         /// <param name="enumerable"></param>
         /// <param name="excelType"></param>
         /// <returns></returns>
-        public static IWorkbook DumpXLS<T>(this IEnumerable<T> enumerable) { return DumpExcel(enumerable, ExcelType.XLS); }
+        public static IWorkbook DumpXLS<T>(this IEnumerable<T> enumerable, string sheetName = null) { return DumpExcel(enumerable, ExcelType.XLS, sheetName); }
 
-        public static IWorkbook DumpXLSX<T>(this IEnumerable<T> enumerable) { return DumpExcel(enumerable, ExcelType.XLSX); }
+        public static IWorkbook DumpXLSX<T>(this IEnumerable<T> enumerable, string sheetName = null) { return DumpExcel(enumerable, ExcelType.XLSX, sheetName); }
 
         public static Type FindService(Type type)
         {
