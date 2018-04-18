@@ -18,7 +18,7 @@ namespace NPOI.DumpExcel.Test
                     DT = p % 2 == 0 ? new DateTimeOffset?(DateTimeOffset.Now.AddDays(p)) : null,
                     DT2 = DateTime.Now.AddDays(p),
                     Enum0 = Enum1.AAAAAAAAAAAAAAAAAAAAAA,
-                    Enum1 = Enum1.BBBBBBBBBBBBBBBBBBBBBB,
+                    Enum1 = p % 2 == 0 ? CaseType.Report : new CaseType?(),
                     Name = $"Foo{p}",
                     SerId = p
                 });
@@ -65,7 +65,7 @@ namespace NPOI.DumpExcel.Test
                     DT = p % 2 == 0 ? new DateTimeOffset?(DateTimeOffset.Now.AddDays(p)) : null,
                     DT2 = DateTime.Now.AddDays(p),
                     Enum0 = Enum1.AAAAAAAAAAAAAAAAAAAAAA,
-                    Enum1 = Enum1.BBBBBBBBBBBBBBBBBBBBBB,
+                    Enum1 = CaseType.Report,
                     Name = $"Foo{p}",
                     SerId = p
                 }),

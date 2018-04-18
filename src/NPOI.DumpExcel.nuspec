@@ -2,7 +2,7 @@
 <package >
 	<metadata>
 		<id>NPOI.DumpExcel</id>
-		<version>1.2.4</version>
+		<version>1.2.5</version>
 		<title>NPOI.DumpExcel</title>
 		<description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</description>
 		<authors>YC</authors>
@@ -11,7 +11,7 @@
 		<licenseUrl>https://github.com/ychsu/YC.Http.Formatting.Multipart/blob/master/LICENSE</licenseUrl>
 		<requireLicenseAcceptance>false</requireLicenseAcceptance>
 		<releaseNotes>
-			支援在dump時動態決定sheet名稱
+			解決 Enum 如果是Nullable時的問題
 		</releaseNotes>
 		<copyright>Copyright 2017</copyright>
 		<tags>npoi, IEnumerable&lt;T&gt;</tags>

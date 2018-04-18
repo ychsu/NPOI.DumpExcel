@@ -190,8 +190,9 @@ namespace NPOI.DumpExcel
         {
             var methodBuilder = builder.DefineMethod("InitEnumFactories",
                 MethodAttributes.Private | MethodAttributes.PrivateScope | MethodAttributes.Static);
-            var enumTypes = this.properties.Where(p => p.PropertyType.IsEnum)
-                .Select(p => p.PropertyType)
+            var enumTypes = this.properties
+				.Select(p => p.PropertyType.GetGenericArguments().FirstOrDefault() ?? p.PropertyType)
+				.Where(p => p.IsEnum)
                 .Distinct();
 
             var il = methodBuilder.GetILGenerator();
