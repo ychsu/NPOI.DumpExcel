@@ -30,9 +30,15 @@ namespace NPOI.DumpExcel
             var rowType = typeof(IRow);
             var cellType = typeof(ICell);
             // 定義assembly
-            assemblyBuilder = Thread.GetDomain().DefineDynamicAssembly(new AssemblyName { Name = "YC.NPOI.DumpExcel" }, AssemblyBuilderAccess.RunAndSave);
+            assemblyBuilder =
+#if NET40
+                Thread.GetDomain()
+#else
+                AssemblyBuilder
+#endif
+                    .DefineDynamicAssembly(new AssemblyName { Name = "YC.NPOI.DumpExcel" }, AssemblyBuilderAccess.Run);
             // 定義module
-            moduleBuilder = assemblyBuilder.DefineDynamicModule("YC.NPOI.DumpExcel", "YC.NPOI.DumpExcel.dll");
+            moduleBuilder = assemblyBuilder.DefineDynamicModule("YC.NPOI.DumpExcel");
             createRow = sheetType.GetMethod("CreateRow");
             physicalNumberOfRows = sheetType.GetMethod("get_PhysicalNumberOfRows");
             createCell = rowType.GetMethod("CreateCell", new Type[] { typeof(int) });
@@ -101,8 +107,8 @@ namespace NPOI.DumpExcel
                 })
                 .ToList();
 
-            #region filed 
-            #endregion
+#region filed 
+#endregion
 
             this.EmitStaticConstructor(this.EmitInitEmunFactories());
 
@@ -116,7 +122,12 @@ namespace NPOI.DumpExcel
 
             this.EmitCreateRow();
 
-            var serviceType = this.builder.CreateType();
+            var serviceType =
+#if NET40
+                this.builder.CreateType();
+#else
+                this.builder.CreateTypeInfo().AsType();
+#endif
 
 #if SAVEASSEMBLY
             assemblyBuilder.Save("YC.NPOI.DumpExcel.dll");
@@ -276,10 +287,10 @@ namespace NPOI.DumpExcel
 
             var il = methodBuilder.GetILGenerator();
 
-            #region local variables
+#region local variables
             var dataFormat = il.DeclareLocal(typeof(IDataFormat));
             var style = il.DeclareLocal(typeof(ICellStyle));
-            #endregion
+#endregion
 
             var method_CreateDataFormat = typeof(IWorkbook).GetMethod("CreateDataFormat", new Type[] { });
             var method_GetFormat = typeof(IDataFormat).GetMethod("GetFormat", new Type[] { typeof(string) });
@@ -292,13 +303,13 @@ namespace NPOI.DumpExcel
 
             il.Emit(OpCodes.Nop);
 
-            #region CreateDataFormat;
+#region CreateDataFormat;
             il.Emit(OpCodes.Ldarg_0);
             il.Emit(OpCodes.Ldfld, sheet);
             il.Emit(OpCodes.Callvirt, prop_Workbook.GetGetMethod());
             il.Emit(OpCodes.Callvirt, method_CreateDataFormat);
             il.Emit(OpCodes.Stloc, dataFormat);
-            #endregion
+#endregion
 
             var groupByFormat = this.properties.GroupBy(p => p.CellFormatter)
                 .Select(g => new
@@ -470,14 +481,14 @@ namespace NPOI.DumpExcel
             il.Emit(OpCodes.Callvirt, createCell);
             il.Emit(OpCodes.Stloc, cell);
 
-            #region NPOI 2.3前 匯出xlsx會有吃不到 DefaultColumnStyle 的問題
+#region NPOI 2.3前 匯出xlsx會有吃不到 DefaultColumnStyle 的問題
             il.Emit(OpCodes.Ldloc, cell);
             il.Emit(OpCodes.Ldloc, row);
             il.Emit(OpCodes.Callvirt, typeof(IRow).GetProperty("Sheet").GetGetMethod());
             il.Emit(OpCodes.Ldc_I4, property.ColumnIndex);
             il.Emit(OpCodes.Callvirt, typeof(ISheet).GetMethod("GetColumnStyle"));
             il.Emit(OpCodes.Callvirt, typeof(ICell).GetProperty("CellStyle").GetSetMethod());
-            #endregion
+#endregion
             il.Emit(OpCodes.Nop);
 
             var val = il.DeclareLocal(property.PropertyType);
