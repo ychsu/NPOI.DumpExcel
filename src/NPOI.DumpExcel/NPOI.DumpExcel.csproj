@@ -1,9 +1,24 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.0;net45</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;netstandard2.1;net45</TargetFrameworks>
     <AssemblyName>NPOI.DumpExcel</AssemblyName>
     <RootNamespace>NPOI.DumpExcel</RootNamespace>
+  
+    <Authors>ychsu.tw</Authors>
+    <Description>將IEnumerable 匯出成excel (*.xls, *.xlsx)</Description>
+    <PackageProjectUrl>https://github.com/ychsu/NPOI.DumpExcel</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/ychsu/NPOI.DumpExcel</RepositoryUrl>
+    <Product>NPOI.DumpExcel</Product>
+    <PackageId>NPOI.DumpExcel</PackageId>
+    <GeneratePackageOnBuild>False</GeneratePackageOnBuild>
+    <PackageReleaseNotes>支援多框架</PackageReleaseNotes>
+    <Version>1.3.0</Version>
+    <PackageRequireLicenseAcceptance>False</PackageRequireLicenseAcceptance>
+    <Company>ychsu.tw</Company>
+    <PackageLicenseExpression>
+      MIT
+    </PackageLicenseExpression>
   </PropertyGroup>
 
   <ItemGroup>

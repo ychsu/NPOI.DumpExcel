@@ -3,16 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPOI.DumpExcel", "NPOI.DumpExcel\NPOI.DumpExcel.csproj", "{2833F5E4-645B-439F-B5E5-65F069D67A73}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NPOI.DumpExcel", "NPOI.DumpExcel\NPOI.DumpExcel.csproj", "{2833F5E4-645B-439F-B5E5-65F069D67A73}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPOI.DumpExcel.Test", "NPOI.DumpExcel.Test\NPOI.DumpExcel.Test.csproj", "{E759064E-13A7-4BD0-BD62-7D75003A8E8E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NPOI.DumpExcel40", "NPOI.DumpExcel40\NPOI.DumpExcel40.csproj", "{882733C9-14CF-4374-A0A3-D797FA6719E2}"
-EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{80210E55-A703-4AE6-85CD-E312D86F428F}"
-	ProjectSection(SolutionItems) = preProject
-		NPOI.DumpExcel.nuspec = NPOI.DumpExcel.nuspec
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,12 +28,6 @@ Global
 		{E759064E-13A7-4BD0-BD62-7D75003A8E8E}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E759064E-13A7-4BD0-BD62-7D75003A8E8E}.SAVEASSEMBLY|Any CPU.ActiveCfg = SAVEASSEMBLY|Any CPU
 		{E759064E-13A7-4BD0-BD62-7D75003A8E8E}.SAVEASSEMBLY|Any CPU.Build.0 = SAVEASSEMBLY|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.SAVEASSEMBLY|Any CPU.ActiveCfg = SAVEASSEMBLY|Any CPU
-		{882733C9-14CF-4374-A0A3-D797FA6719E2}.SAVEASSEMBLY|Any CPU.Build.0 = SAVEASSEMBLY|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
